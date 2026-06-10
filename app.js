@@ -236,8 +236,7 @@ const DataProcessor = {
     }
 
     // FCR: decagon-only + closed + has reason + single customer contact
-    tk.fcrAchieved = tk.decagonOnly && tk.compliant &&
-      tk.interactions.filter(i => CONFIG.CUSTOMER_FACING.has(i.type)).length <= 1;
+    tk.fcrAchieved = tk.decagonOnly && !tk.statusNotClosed && !tk.missingReason && !tk.missingSubReason;
 
     // Best display reason (sub reason first, fallback to reason, exclude status values)
     const excl = CONFIG.EXCLUDED_REASONS;
