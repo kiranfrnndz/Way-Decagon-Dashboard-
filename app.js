@@ -1293,13 +1293,15 @@ function buildFCRTab() {
   document.getElementById('fcrApplyFilter')?.addEventListener('click', buildFCRTab);
 }
 
-document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
       item.classList.add('active');
       const tab = item.dataset.tab;
       document.getElementById('tab-' + tab)?.classList.add('active');
-    if (tab === 'fcr') buildFCRTab();
       document.getElementById('topbarTitle').textContent = TITLES[tab] || tab;
+      if (tab === 'fcr') buildFCRTab();
     });
   });
   document.getElementById('sidebarToggle').addEventListener('click', () => {
