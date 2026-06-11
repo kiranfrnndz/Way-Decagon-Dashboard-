@@ -1219,6 +1219,7 @@ function buildFCRTab() {
     </div>`;
 
   // Daily FCR trend chart
+  const base = UI.chartDefaults(); // required for chart options below
   const dateMap = {};
   dec.forEach(t => {
     const d = t.dateBucket || 'Unknown';
