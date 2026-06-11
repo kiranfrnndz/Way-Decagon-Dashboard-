@@ -84,7 +84,7 @@ const CONFIG = {
     interaction:['Interaction','Interaction Type'],
     intDate:    ['Interaction date','Interaction Date','Created Date'],
     intId:      ['Interaction ID'],
-    reason:     ['TKT_IssueReason','Reason'],
+    reason:     ['Reason'],
     subReason:  ['Sub Reason','sub_reason'],
     action:     ['Action','Action Taken'],
     status:     ['Status'],
