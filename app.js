@@ -554,10 +554,14 @@ function processRows(rows, filename) {
       document.getElementById('dataBadgeText').textContent = UI.fmt.num(m.decagonTickets) + ' Decagon Calls';
 
       renderValidationBreakdown();
-      renderDashboard();
-      setProgress(100, 'Done');
-      hideProgress();
-      UI.toast(`Loaded ${UI.fmt.num(rows.length)} records — ${UI.fmt.num(m.decagonTickets)} Decagon calls`, 'success');
+      setProgress(96, 'Rendering dashboard...');
+      setTimeout(() => {
+        renderDashboard();
+        setProgress(100, 'Done');
+        hideProgress();
+        UI.toast(`Loaded ${UI.fmt.num(rows.length)} records — ${UI.fmt.num(STATE.lastMetrics ? STATE.lastMetrics.decagonTickets : '...')} Decagon calls`, 'success');
+      }, 80);
+
     }, 50);
   }, 50);
 }
