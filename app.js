@@ -169,7 +169,7 @@ const DataProcessor = {
       if (!tk.reason && this.get(row, 'reason')) tk.reason = this.get(row, 'reason');
       if (!tk.subReason && this.get(row, 'subReason')) tk.subReason = this.get(row, 'subReason');
       if (!tk.actionTaken && this.get(row, 'action')) tk.actionTaken = this.get(row, 'action');
-      if (!tk.status && this.get(row, 'status')) tk.status = this.get(row, 'status');
+      const rowStatus = this.get(row, 'status'); if (rowStatus) tk.status = rowStatus;
       if (tk.ogi === 'UNKNOWN' && this.get(row, 'ogi')) tk.ogi = this.get(row, 'ogi');
     }
 
@@ -235,8 +235,7 @@ const DataProcessor = {
       tk.compliant = false;
     }
 
-    // FCR: fail if CS assisted, multiple AI calls, or short interval interactions
-    tk.fcrAchieved = !tk.csAssisted && aiInts.length === 1 && !tk.shortIntervalFlag;
+    // FCR: computed after computeShortIntervals — see computeFCR()
 
     // Best display reason (sub reason first, fallback to reason, exclude status values)
     const excl = CONFIG.EXCLUDED_REASONS;
@@ -252,7 +251,15 @@ const DataProcessor = {
     }
     tk.sameTimestampInteractions = Object.values(tsCounts).filter(c => c > 1).length;
     tk.hasDefect = tk.sameTimestampInteractions > 0;
-    tk.shortIntervalFlag = false; // computed at aggregate level
+    tk.shortIntervalFlag = false; // fcrAchieved computed after computeShortIntervals
+  },
+
+  computeFCR(ticketMap) {
+    for (const tk of ticketMap.values()) {
+      if (!tk.isDecagonTicket) { tk.fcrAchieved = false; continue; }
+      const aiInts = tk.interactions.filter(i => i.type === CONFIG.AI_TYPE);
+      tk.fcrAchieved = !tk.csAssisted && aiInts.length === 1 && !tk.shortIntervalFlag;
+    }
   },
 
   computeShortIntervals(ticketMap, thresholdSec) {
@@ -518,6 +525,7 @@ function processRows(rows, filename) {
     setTimeout(() => {
       // Compute short intervals
       DataProcessor.computeShortIntervals(STATE.ticketMap, CONFIG.DEFECT_THRESHOLD_SEC);
+      DataProcessor.computeFCR(STATE.ticketMap);
 
       // Set filtered = all by default
       STATE.filteredTickets = new Map(STATE.ticketMap);
@@ -742,7 +750,7 @@ function renderComplianceSection(m) {
       STATE.datatables.compDrill = $('#compDrillTable').DataTable({
         data: tickets, pageLength: 10, dom: 'Bfrtip', buttons: ['csv'],
         columns: [
-          { title: 'Ticket ID', data: 'ticketId', render: d => `<span class="ticket-link" onclick="showTimeline('${d}')">${d}</span>` },
+          { title: 'Ticket ID', data: 'ticketId', render: d => `<span class="ticket-link" data-tid="${encodeURIComponent(String(d))}">${String(d)}</span>` },
           { title: 'OGI', data: 'ogi' },
           { title: 'Date', data: 'dateBucket', render: d => UI.fmt.date(d) },
           { title: 'Sub Reason', data: 'subReason', render: d => d || UI.badge('MISSING', 'red') },
@@ -798,7 +806,7 @@ function showDefectDrill(type) {
   STATE.datatables.defectDrill = $('#defectDrillTable').DataTable({
     data, pageLength: 15, dom: 'Bfrtip', buttons: ['csv'], scrollX: true,
     columns: [
-      { title: 'Ticket ID', data: 'ticketId', render: d => `<span class="ticket-link" onclick="showTimeline('${d.split(',')[0].trim()}')">${d}</span>` },
+      { title: 'Ticket ID', data: 'ticketId', render: d => `<span class="ticket-link" data-tid="${encodeURIComponent(String(d.split(',')[0].trim()))}">${String(d.split(',')[0].trim())}</span>` },
       { title: 'Date', data: 'createdDate' },
       { title: 'AI Ints', data: 'aiInteractionCount' },
       { title: 'Same TS', data: 'sameTimestamp', render: d => (d === 'YES' || d > 0) ? UI.badge('YES', 'red') : UI.badge('No', 'muted') },
@@ -883,7 +891,7 @@ function renderMasterTable(m) {
     data: m.dec, pageLength: 25, dom: 'Bfrtip', buttons: ['csv', 'excel'], scrollX: true,
     columns: [
       { title: 'OGI', data: 'ogi' },
-      { title: 'Ticket ID', data: 'ticketId', render: d => `<a class="ticket-link" onclick="showTimeline('${d}')">${d}</a>` },
+      { title: 'Ticket ID', data: 'ticketId', render: d => `<span class="ticket-link" data-tid="${encodeURIComponent(String(d))}">${String(d)}</span>` },
       { title: 'Date', data: 'dateBucket', render: d => UI.fmt.date(d) },
       { title: 'Vertical', data: 'subVertical', render: (d, _, r) => d || r.vertical || '—' },
       { title: 'Sub Reason', data: 'subReason', render: d => d || '<span style="color:#94a3b8">—</span>' },
@@ -988,7 +996,7 @@ function renderRecontactTab(m) {
     STATE.datatables.recontactTable = $('#recontactTable').DataTable({
       data: m.rcTickets, pageLength: 25, dom: 'Bfrtip', buttons: ['csv', 'excel'], scrollX: true,
       columns: [
-        { title: 'Ticket ID', data: 'ticketId', render: d => `<a class="ticket-link" onclick="showTimeline('${d}')">${d}</a>` },
+        { title: 'Ticket ID', data: 'ticketId', render: d => `<span class="ticket-link" data-tid="${encodeURIComponent(String(d))}">${String(d)}</span>` },
         { title: 'OGI', data: 'ogi' },
         { title: 'Date', data: 'dateBucket', render: d => UI.fmt.date(d) },
         { title: 'Sub Reason', data: 'subReason', render: d => d || '—' },
@@ -1302,7 +1310,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
       const tab = item.dataset.tab;
       document.getElementById('tab-' + tab)?.classList.add('active');
       document.getElementById('topbarTitle').textContent = TITLES[tab] || tab;
-      if (tab === 'fcr') buildFCRTab();
+      // FCR tab built by renderDashboard only
     });
   });
   document.getElementById('sidebarToggle').addEventListener('click', () => {
@@ -1325,7 +1333,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('recalcDefectsBtn').addEventListener('click', () => {
     CONFIG.DEFECT_THRESHOLD_SEC = parseInt(document.getElementById('defectThreshold').value) || 60;
     DataProcessor.computeShortIntervals(STATE.ticketMap, CONFIG.DEFECT_THRESHOLD_SEC);
-    DataProcessor.computeShortIntervals(STATE.filteredTickets, CONFIG.DEFECT_THRESHOLD_SEC);
+    DataProcessor.computeFCR(STATE.ticketMap);
+    STATE.filteredTickets = new Map(STATE.ticketMap);
     renderDefectSection(DataProcessor.computeMetrics(STATE.filteredTickets, STATE.totalCallInts, STATE.totalAIInts, STATE.rawRows.length));
     UI.toast('Threshold updated to ' + CONFIG.DEFECT_THRESHOLD_SEC + 's', 'info');
   });
