@@ -320,7 +320,7 @@ const DataProcessor = {
       csAssistedCount: csCount,
       csAssistedRate: pct(csCount, n),
       containedCount, containmentRate: pct(containedCount, n),
-      fcrCount, fcrRate: pct(fcrCount, no),
+      fcrCount, fcrRate: pct(fcrCount, n),
       compliantCount, complianceRate: pct(compliantCount, no),
       complianceFailures: no - compliantCount,
       missingReason, missingSubReason, statusNotClosed, pendingStatus,
@@ -603,7 +603,6 @@ function renderDashboard() {
   const m = DataProcessor.computeMetrics(STATE.filteredTickets, STATE.totalCallInts, STATE.totalAIInts, STATE.rawRows.length);
   renderKPIs(m);
   renderEffectivenessCharts(m);
-  buildFCRTab();
   renderComplianceSection(m);
   renderDefectSection(m);
   renderReasonAnalysis(m);
@@ -1186,10 +1185,20 @@ function buildFCRTab() {
       <div class="kpi-val" style="color:#7c3aed">${UI.fmt.num(trueFCR.length)}</div>
       <div class="kpi-sub">${trueFCRRate}% of total</div>
     </div>
-    <div class="kpi-card" style="border-top:3px solid #d97706">
-      <div class="kpi-label">FAILURE — CS ASSISTED</div>
-      <div class="kpi-val" style="color:#d97706">${UI.fmt.num(csAssisted.length)}</div>
-      <div class="kpi-sub">Multi AI: ${UI.fmt.num(multiAI.length)} | Short Interval: ${UI.fmt.num(shortInt.length)}</div>
+    <div class="kpi-card" style="border-top:3px solid #f59e0b">
+      <div class="kpi-label">CS ASSISTED</div>
+      <div class="kpi-val" style="color:#f59e0b">${UI.fmt.num(csAssisted.length)}</div>
+      <div class="kpi-sub">${dec.length ? (csAssisted.length/dec.length*100).toFixed(1) : 0}% of total</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid #3b82f6">
+      <div class="kpi-label">MULTIPLE AI CALLS</div>
+      <div class="kpi-val" style="color:#3b82f6">${UI.fmt.num(multiAI.length)}</div>
+      <div class="kpi-sub">${dec.length ? (multiAI.length/dec.length*100).toFixed(1) : 0}% of total</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid #ef4444">
+      <div class="kpi-label">SHORT INTERVAL</div>
+      <div class="kpi-val" style="color:#ef4444">${UI.fmt.num(shortInt.length)}</div>
+      <div class="kpi-sub">${dec.length ? (shortInt.length/dec.length*100).toFixed(1) : 0}% of total</div>
     </div>`;
 
   // Daily FCR trend chart
@@ -1321,10 +1330,20 @@ function buildFCRTab() {
       <div class="kpi-val" style="color:#7c3aed">${UI.fmt.num(trueFCR.length)}</div>
       <div class="kpi-sub">${trueFCRRate}% of total</div>
     </div>
-    <div class="kpi-card" style="border-top:3px solid #d97706">
-      <div class="kpi-label">FAILURE — CS ASSISTED</div>
-      <div class="kpi-val" style="color:#d97706">${UI.fmt.num(csAssisted.length)}</div>
-      <div class="kpi-sub">Multi AI: ${UI.fmt.num(multiAI.length)} | Short Interval: ${UI.fmt.num(shortInt.length)}</div>
+    <div class="kpi-card" style="border-top:3px solid #f59e0b">
+      <div class="kpi-label">CS ASSISTED</div>
+      <div class="kpi-val" style="color:#f59e0b">${UI.fmt.num(csAssisted.length)}</div>
+      <div class="kpi-sub">${dec.length ? (csAssisted.length/dec.length*100).toFixed(1) : 0}% of total</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid #3b82f6">
+      <div class="kpi-label">MULTIPLE AI CALLS</div>
+      <div class="kpi-val" style="color:#3b82f6">${UI.fmt.num(multiAI.length)}</div>
+      <div class="kpi-sub">${dec.length ? (multiAI.length/dec.length*100).toFixed(1) : 0}% of total</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid #ef4444">
+      <div class="kpi-label">SHORT INTERVAL</div>
+      <div class="kpi-val" style="color:#ef4444">${UI.fmt.num(shortInt.length)}</div>
+      <div class="kpi-sub">${dec.length ? (shortInt.length/dec.length*100).toFixed(1) : 0}% of total</div>
     </div>`;
 
   // Daily FCR trend chart
