@@ -609,6 +609,7 @@ function renderDashboard() {
   renderMasterTable(m);
   renderCEOSummary(m);
   renderRecontactTab(m);
+  buildFCRTab();
 }
 
 // ── KPIs ──
