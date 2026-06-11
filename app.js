@@ -899,7 +899,7 @@ function showReasonDetail(reason) {
 function renderMasterTable(m) {
   if (STATE.datatables.masterTable) { STATE.datatables.masterTable.destroy(); document.getElementById('masterTable').innerHTML = ''; }
   STATE.datatables.masterTable = $('#masterTable').DataTable({
-    data: m.dec, pageLength: 25, dom: 'Bfrtip', buttons: ['csv', 'excel'], scrollX: true,
+    data: m.dec, pageLength: 25, deferRender: true, dom: 'Bfrtip', buttons: ['csv', 'excel'], scrollX: true,
     columns: [
       { title: 'OGI', data: 'ogi' },
       { title: 'Ticket ID', data: 'ticketId', render: d => `<span class="ticket-link" data-tid="${encodeURIComponent(String(d))}">${String(d)}</span>` },
@@ -1005,7 +1005,7 @@ function renderRecontactTab(m) {
   if (STATE.datatables.recontactTable) { STATE.datatables.recontactTable.destroy(); document.getElementById('recontactTable').innerHTML = ''; }
   if (document.getElementById('recontactTable')) {
     STATE.datatables.recontactTable = $('#recontactTable').DataTable({
-      data: m.rcTickets, pageLength: 25, dom: 'Bfrtip', buttons: ['csv', 'excel'], scrollX: true,
+      data: m.rcTickets, pageLength: 25, deferRender: true, dom: 'Bfrtip', buttons: ['csv', 'excel'], scrollX: true,
       columns: [
         { title: 'Ticket ID', data: 'ticketId', render: d => `<span class="ticket-link" data-tid="${encodeURIComponent(String(d))}">${String(d)}</span>` },
         { title: 'OGI', data: 'ogi' },
@@ -1297,6 +1297,7 @@ function buildFCRTab() {
   STATE.fcrDrillTable = new DataTable('#fcrDrillTable', {
     data: filtered,
     destroy: true,
+    deferRender: true,
     pageLength: 25,
     columns: [
       { title: 'Ticket ID', data: 'ticketId' },
