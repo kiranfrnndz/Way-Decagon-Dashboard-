@@ -1250,32 +1250,27 @@ function buildFCRTab() {
     }, options: { ...base, plugins: { ...base.plugins, legend: { display: true, position: 'bottom' } } } });
   }
 
-  // Reason / Sub Reason table
-  const reasonMap = {};
+  // Reason grouped - col Z parent, col AA child, excludes escalated
+  const excl2 = CONFIG.EXCLUDED_REASONS;
+  const rgMap = {};
   dec.forEach(t => {
-    const r = (t.reason && t.reason.trim()) || (t.actionTaken && t.actionTaken.trim()) || '(No Reason)';
-    const sr2 = (t.subReason && t.subReason.trim()) || (t.actionTaken && t.actionTaken.trim()) || r;
-    const key = r + '|||' + sr2;
-    if (!reasonMap[key]) reasonMap[key] = { reason: r, subReason: sr2, met: 0, notMet: 0 };
-    if (t.fcrAchieved) reasonMap[key].met++; else reasonMap[key].notMet++;
+    const r = (t.reason&&t.reason.trim()&&!excl2.has(t.reason.trim().toLowerCase()))?t.reason.trim():'(No Reason)';
+    const sr = (t.subReason&&t.subReason.trim()&&!excl2.has(t.subReason.trim().toLowerCase()))?t.subReason.trim():'(No Sub Reason)';
+    if(!rgMap[r]) rgMap[r]={met:0,notMet:0,subs:{}};
+    t.fcrAchieved?rgMap[r].met++:rgMap[r].notMet++;
+    if(!rgMap[r].subs[sr]) rgMap[r].subs[sr]={met:0,notMet:0};
+    t.fcrAchieved?rgMap[r].subs[sr].met++:rgMap[r].subs[sr].notMet++;
   });
-
-  const rows = Object.values(reasonMap).sort((a, b) => (b.met + b.notMet) - (a.met + a.notMet));
   const rtDiv = document.getElementById('fcrReasonTable');
-  if (rtDiv) {
-    rtDiv.innerHTML = `<table class="fcr-reason-table">
-      <thead><tr><th>Reason</th><th>Sub Reason</th><th>FCR Met</th><th>Not Met</th><th>Total</th></tr></thead>
-      <tbody>${rows.map(r => `<tr class="fcr-reason-group">
-        <td>${r.reason}</td>
-        <td>${r.subReason}</td>
-        <td><span class="fcr-met-badge">${r.met}</span></td>
-        <td><span class="fcr-fail-badge">${r.notMet}</span></td>
-        <td>${r.met + r.notMet}</td>
-      </tr>`).join('')}</tbody>
-    </table>`;
+  if(rtDiv){
+    const html=Object.entries(rgMap).sort((a,b)=>(b[1].met+b[1].notMet)-(a[1].met+a[1].notMet)).map(([reason,g])=>{
+      const uid='u'+Math.random().toString(36).slice(2,8);
+      const subs=Object.entries(g.subs).sort((a,b)=>(b[1].met+b[1].notMet)-(a[1].met+a[1].notMet)).map(([sr,v])=>`<tr class="sr_${uid}" style="display:none;background:#f8fafc"><td style="padding-left:2rem;color:#64748b;font-size:11px">↳ ${sr}</td><td><span class="fcr-met-badge">${v.met}</span></td><td><span class="fcr-fail-badge">${v.notMet}</span></td><td>${v.met+v.notMet}</td></tr>`).join('');
+      return `<tr style="cursor:pointer;font-weight:500" onclick="this.parentNode.querySelectorAll('.sr_${uid}').forEach(s=>s.style.display=s.style.display==='none'?'':'none');this.querySelector('span.arr').textContent=this.querySelector('span.arr').textContent==='▶'?'▼':'▶'"><td><span class="arr" style="font-size:10px;color:#94a3b8;margin-right:4px">▶</span>${reason} <span style="font-size:10px;color:#94a3b8;font-weight:400">(${Object.keys(g.subs).length})</span></td><td><span class="fcr-met-badge">${g.met}</span></td><td><span class="fcr-fail-badge">${g.notMet}</span></td><td>${g.met+g.notMet}</td></tr>${subs}`;
+    }).join('');
+    rtDiv.innerHTML=`<table class="fcr-reason-table" style="width:100%"><thead><tr><th>Reason (click to expand)</th><th>FCR Met</th><th>Not Met</th><th>Total</th></tr></thead><tbody>${html}</tbody></table>`;
   }
-
-  // Drill-down DataTable
+    // Drill-down DataTable
   if (STATE.fcrDrillTable) { try { STATE.fcrDrillTable.destroy(); } catch(e){} STATE.fcrDrillTable = null; }
   const statusFilter = document.getElementById('fcrFilterStatus')?.value || '';
   const reasonFilter = document.getElementById('fcrFilterReason')?.value || '';
