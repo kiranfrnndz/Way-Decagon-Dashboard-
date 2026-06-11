@@ -235,8 +235,10 @@ const DataProcessor = {
       tk.compliant = false;
     }
 
-    // FCR: decagon-only + closed + has reason + single customer contact
-    tk.fcrAchieved = tk.decagonOnly;
+    // FCR: no interaction (human or Decagon) after the last Decagon call
+    const lastAI = aiInts[aiInts.length - 1];
+    const anyAfterLastAI = [...humanInts, ...aiInts].some(i => i.timestamp > lastAI.timestamp);
+    tk.fcrAchieved = !anyAfterLastAI;
 
     // Best display reason (sub reason first, fallback to reason, exclude status values)
     const excl = CONFIG.EXCLUDED_REASONS;
