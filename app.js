@@ -526,12 +526,13 @@ function processRows(rows, filename) {
     STATE.totalCallInts = totalCallInts;
     STATE.totalAIInts = totalAIInts;
 
-    setProgress(80, 'Computing metrics...');
+    setProgress(75, 'Computing short intervals...');
 
     setTimeout(() => {
-      // Compute short intervals
       DataProcessor.computeShortIntervals(STATE.ticketMap, CONFIG.DEFECT_THRESHOLD_SEC);
+      setProgress(85, 'Computing FCR...');
       DataProcessor.computeFCR(STATE.ticketMap);
+      setProgress(92, 'Finalising...');
 
       // Set filtered = all by default
       STATE.filteredTickets = new Map(STATE.ticketMap);
