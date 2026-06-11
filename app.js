@@ -235,10 +235,8 @@ const DataProcessor = {
       tk.compliant = false;
     }
 
-    // FCR: no interaction (human or Decagon) after the last Decagon call
-    const lastAI = aiInts[aiInts.length - 1];
-    const anyAfterLastAI = [...humanInts, ...aiInts].some(i => i.timestamp > lastAI.timestamp);
-    tk.fcrAchieved = !anyAfterLastAI;
+    // FCR: fail if CS assisted, multiple AI calls, or short interval interactions
+    tk.fcrAchieved = !tk.csAssisted && aiInts.length === 1 && !tk.shortIntervalFlag;
 
     // Best display reason (sub reason first, fallback to reason, exclude status values)
     const excl = CONFIG.EXCLUDED_REASONS;
