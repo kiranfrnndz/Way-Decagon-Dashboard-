@@ -559,14 +559,12 @@ function processRows(rows, filename) {
         renderDashboard();
         setProgress(100, 'Done');
         hideProgress();
-        UI.toast(`Loaded ${UI.fmt.num(rows.length)} records — ${UI.fmt.num(STATE.lastMetrics ? STATE.lastMetrics.decagonTickets : '...')} Decagon calls`, 'success');
+        UI.toast(`Loaded ${UI.fmt.num(rows.length)} records — ${UI.fmt.num(m.decagonTickets)} Decagon calls`, 'success');
       }, 80);
-
     }, 50);
-  }, 50);
+  });
 }
 
-// ═══════════════════════════════════════════════════════════
 // MODULE 7: VALIDATION RENDER
 // ═══════════════════════════════════════════════════════════
 function renderValidation(rows, cm, passed) {
