@@ -685,7 +685,7 @@ function renderEffectivenessCharts(m) {
 
   const decCounts = vals.map(ts => ts.filter(t => t.isDecagonTicket).length);
   const intCounts = vals.map(ts => ts.reduce((s, t) => s + t.aiInteractionCount, 0));
-  const fcrRates = vals.map(ts => { const d = ts.filter(t => t.decagonOnly); return d.length ? (d.filter(t => t.fcrAchieved).length / d.length * 100) : 0; });
+  const fcrRates = vals.map(ts => { const d = ts.filter(t => t.isDecagonTicket); return d.length ? (d.filter(t => t.fcrAchieved).length / d.length * 100).toFixed(1) : 0; });
   const csRates = vals.map(ts => { const d = ts.filter(t => t.isDecagonTicket); return d.length ? (d.filter(t => t.csAssisted).length / d.length * 100) : 0; });
   const containRates = vals.map(ts => { const d = ts.filter(t => t.isDecagonTicket); return d.length ? (d.filter(t => t.decagonContained).length / d.length * 100) : 0; });
 
