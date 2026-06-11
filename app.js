@@ -629,7 +629,8 @@ function renderDashboard() {
   renderMasterTable(m);
   renderCEOSummary(m);
   renderRecontactTab(m);
-  buildFCRTab();
+  // FCR tab is lazy — built on first click only
+  STATE.fcrBuilt = false;
 }
 
 // ── KPIs ──
@@ -1089,6 +1090,7 @@ function applyDateFilter() {
   const from = document.getElementById('globalDateFrom').value;
   const to = document.getElementById('globalDateTo').value;
   STATE.filteredTickets = new Map();
+  STATE.fcrBuilt = false; // force FCR rebuild on next click
   STATE.ticketMap.forEach((tk, id) => {
     // Compare YYYY-MM-DD strings directly - no Date objects - no timezone issues
     const d = tk.dateBucket;
@@ -1103,6 +1105,7 @@ function applyDateFilter() {
 
 function clearDateFilter() {
   STATE.filteredTickets = new Map(STATE.ticketMap);
+  STATE.fcrBuilt = false;
   const decDates = [...STATE.ticketMap.values()].filter(t => t.isDecagonTicket && t.dateBucket).map(t => t.dateBucket).sort();
   if (decDates.length) {
     document.getElementById('globalDateFrom').value = decDates[0];
@@ -1323,7 +1326,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
       const tab = item.dataset.tab;
       document.getElementById('tab-' + tab)?.classList.add('active');
       document.getElementById('topbarTitle').textContent = TITLES[tab] || tab;
-      // FCR tab built by renderDashboard only
+      if (tab === 'fcr') { if (!STATE.fcrBuilt) { buildFCRTab(); STATE.fcrBuilt = true; } }
     });
   });
   document.getElementById('sidebarToggle').addEventListener('click', () => {
