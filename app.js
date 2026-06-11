@@ -624,7 +624,7 @@ function renderKPIs(m) {
   const kpis = [
     { label: 'Calls Handled by Decagon', main: UI.fmt.num(m.decagonTickets), sub: null, icon: 'fa-robot', color: 'cyan', tip: 'Unique calls where Decagon was involved', lvl: 'Ticket' },
     { label: 'Interactions by Decagon', main: UI.fmt.num(m.totalAIInts), sub: null, icon: 'fa-comments', color: 'purple', tip: 'Total AI-Agent Call interaction records', lvl: 'Interaction' },
-    { label: 'Decagon FCR', main: UI.fmt.pct(m.fcrRate), sub: UI.fmt.num(m.fcrCount) + ' calls', icon: 'fa-bullseye', color: 'green', tip: 'Calls resolved by Decagon: no CS + closed + reason tagged. Base: ' + UI.fmt.num(m.decagonOnlyCount) + ' Decagon-only calls', lvl: 'Ticket' },
+    { label: 'Decagon FCR', main: UI.fmt.pct(m.fcrRate), sub: UI.fmt.num(m.fcrCount) + ' calls', icon: 'fa-bullseye', color: 'green', tip: 'Calls handled by Decagon with no CS involvement. Click for compliance breakdown.', lvl: 'Ticket', onclick: 'showFCRDrilldown()' },
     { label: 'Decagon Containment Rate', main: UI.fmt.pct(m.containmentRate), sub: UI.fmt.num(m.containedCount) + ' calls', icon: 'fa-shield-halved', color: 'green', tip: 'Calls with no CS agent after Decagon', lvl: 'Ticket' },
     { label: 'CS Assisted', main: UI.fmt.pct(m.csAssistedRate), sub: UI.fmt.num(m.csAssistedCount) + ' calls', icon: 'fa-person-walking-arrow-right', color: 'amber', tip: 'Calls where CS had to step in after Decagon', lvl: 'Ticket', pctLarge: true },
     { label: 'Handled by Decagon Only', main: UI.fmt.num(m.decagonOnlyCount), sub: UI.fmt.pct(m.decagonOnlyCount / m.decagonTickets * 100), icon: 'fa-circle-check', color: 'green', tip: 'Calls with zero CS agent involvement', lvl: 'Ticket' },
