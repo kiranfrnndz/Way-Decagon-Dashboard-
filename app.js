@@ -477,6 +477,12 @@ function hideProgress() {
 
 function processFile(file) {
   const name = file.name.toLowerCase();
+  const sizeMB = file.size / 1024 / 1024;
+  if (sizeMB > 100) {
+    if (!confirm(`File is ${sizeMB.toFixed(1)} MB — may take 30-60s. Continue?`)) return;
+  } else if (sizeMB > 50) {
+    UI.toast(`Large file (${sizeMB.toFixed(1)} MB) — may take 15-30s`, 'info', 6000);
+  }
   setProgress(10, 'Reading file...');
   if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
     readXLSX(file).then(rows => processRows(rows, file.name)).catch(err => {
@@ -609,6 +615,7 @@ function renderValidationBreakdown() {
 // ═══════════════════════════════════════════════════════════
 function renderDashboard() {
   const m = DataProcessor.computeMetrics(STATE.filteredTickets, STATE.totalCallInts, STATE.totalAIInts, STATE.rawRows.length);
+  m.dateBuckets = DataProcessor.getDateBuckets(STATE.filteredTickets);
   renderKPIs(m);
   renderEffectivenessCharts(m);
   renderComplianceSection(m);
@@ -661,7 +668,7 @@ function renderKPIs(m) {
 // ── EFFECTIVENESS CHARTS ──
 function renderEffectivenessCharts(m) {
   const base = UI.chartDefaults();
-  const buckets = DataProcessor.getDateBuckets(STATE.filteredTickets);
+  const buckets = m.dateBuckets || DataProcessor.getDateBuckets(STATE.filteredTickets);
 
   // Labels: format YYYY-MM-DD → "Jun 8"
   const labels = [...buckets.keys()].map(d => {
@@ -718,7 +725,7 @@ function renderComplianceSection(m) {
     options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { color: tc, font: { size: 11 }, padding: 8 } } } }
   });
 
-  const buckets = DataProcessor.getDateBuckets(STATE.filteredTickets);
+  const buckets = m.dateBuckets || DataProcessor.getDateBuckets(STATE.filteredTickets);
   const labels = [...buckets.keys()].map(d => { const [, mo, dy] = d.split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(mo)-1] + ' ' + parseInt(dy); });
   const vals = [...buckets.values()];
 
@@ -1299,7 +1306,8 @@ function buildFCRTab() {
   });
 
   }, 50);
-  document.getElementById('fcrApplyFilter')?.addEventListener('click', buildFCRTab);
+  const fcrApplyBtn = document.getElementById('fcrApplyFilter');
+  if (fcrApplyBtn) fcrApplyBtn.onclick = buildFCRTab;
 }
 
 document.querySelectorAll('.nav-item').forEach(item => {
@@ -1353,3 +1361,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 window.showTimeline = showTimeline;
 window.showDefectDrill = showDefectDrill;
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('.ticket-link[data-tid]');
+  if (el) { e.preventDefault(); showTimeline(decodeURIComponent(el.dataset.tid)); }
+});
