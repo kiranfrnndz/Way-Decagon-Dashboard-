@@ -624,7 +624,7 @@ function renderKPIs(m) {
   const kpis = [
     { label: 'Calls Handled by Decagon', main: UI.fmt.num(m.decagonTickets), sub: null, icon: 'fa-robot', color: 'cyan', tip: 'Unique calls where Decagon was involved', lvl: 'Ticket' },
     { label: 'Interactions by Decagon', main: UI.fmt.num(m.totalAIInts), sub: null, icon: 'fa-comments', color: 'purple', tip: 'Total AI-Agent Call interaction records', lvl: 'Interaction' },
-    { label: 'Decagon FCR', main: UI.fmt.pct(m.fcrRate), sub: UI.fmt.num(m.fcrCount) + ' calls', icon: 'fa-bullseye', color: 'green', tip: 'Calls handled by Decagon with no CS involvement. Click for compliance breakdown.', lvl: 'Ticket', onclick: 'showFCRDrilldown()' },
+    { label: 'Decagon FCR', main: UI.fmt.pct(m.fcrRate), sub: UI.fmt.num(m.fcrCount) + ' calls', icon: 'fa-bullseye', color: 'green', tip: 'FCR Met: no repeat contact, no CS involvement, no short interval interactions. Of these, only the fully compliant ones (Reason + Sub Reason + Closed) represent True FCR.', lvl: 'Ticket', onclick: 'showFCRDrilldown()' },
     { label: 'Decagon Containment Rate', main: UI.fmt.pct(m.containmentRate), sub: UI.fmt.num(m.containedCount) + ' calls', icon: 'fa-shield-halved', color: 'green', tip: 'Calls with no CS agent after Decagon', lvl: 'Ticket' },
     { label: 'CS Assisted', main: UI.fmt.pct(m.csAssistedRate), sub: UI.fmt.num(m.csAssistedCount) + ' calls', icon: 'fa-person-walking-arrow-right', color: 'amber', tip: 'Calls where CS had to step in after Decagon', lvl: 'Ticket', pctLarge: true },
     { label: 'Handled by Decagon Only', main: UI.fmt.num(m.decagonOnlyCount), sub: UI.fmt.pct(m.decagonOnlyCount / m.decagonTickets * 100), icon: 'fa-circle-check', color: 'green', tip: 'Calls with zero CS agent involvement', lvl: 'Ticket' },
@@ -1009,7 +1009,7 @@ function renderCEOSummary(m) {
   const obs = [
     `Decagon handled <strong>${UI.fmt.num(m.decagonTickets)} calls</strong> out of <strong>${UI.fmt.num(m.totalCallInts)} total calls</strong> — representing <strong>${decShare}%</strong> of all voice interactions.`,
     `Of ${UI.fmt.num(m.decagonTickets)} calls, <strong>${UI.fmt.num(m.decagonOnlyCount)} (${pctAlone}%)</strong> were handled by Decagon alone without CS involvement.`,
-    `Decagon FCR is <strong>${UI.fmt.pct(m.fcrRate)} (${UI.fmt.num(m.fcrCount)} calls)</strong> — handled by Decagon with no CS involvement. However only <strong>${UI.fmt.num(m.compliantCount)}</strong> of those are fully documented (closed + reason tagged) — the rest are Decagon API issues.`,
+    `Decagon FCR is <strong>${UI.fmt.pct(m.fcrRate)}</strong> (${UI.fmt.num(m.fcrCount)} calls) — tickets where Decagon handled the call with no repeat contact, no CS involvement, and no short interval interactions. Of these, only <strong>${UI.fmt.num(m.compliantCount)}</strong> meet full compliance (Reason + Sub Reason + Closed) — representing True FCR. The remaining compliance failures are Decagon API issues.rong>${UI.fmt.pct(m.fcrRate)} (${UI.fmt.num(m.fcrCount)} calls)</strong> — handled by Decagon with no CS involvement. However only <strong>${UI.fmt.num(m.compliantCount)}</strong> of those are fully documented (closed + reason tagged) — the rest are Decagon API issues.`,
     `<strong>${UI.fmt.num(m.statusNotClosed)} call tickets are not closed</strong> — this is a Decagon API integration issue, not an agent issue.`
   ];
 
