@@ -1009,7 +1009,7 @@ function renderCEOSummary(m) {
   const obs = [
     `Decagon handled <strong>${UI.fmt.num(m.decagonTickets)} calls</strong> out of <strong>${UI.fmt.num(m.totalCallInts)} total calls</strong> — representing <strong>${decShare}%</strong> of all voice interactions.`,
     `Of ${UI.fmt.num(m.decagonTickets)} calls, <strong>${UI.fmt.num(m.decagonOnlyCount)} (${pctAlone}%)</strong> were handled by Decagon alone without CS involvement.`,
-    `Only <strong>${UI.fmt.num(m.fcrCount)} call tickets (${UI.fmt.pct(m.fcrRate)})</strong> were fully resolved and closed — Decagon API is not closing tickets after handling calls.`,
+    `Decagon FCR is <strong>${UI.fmt.pct(m.fcrRate)} (${UI.fmt.num(m.fcrCount)} calls)</strong> — handled by Decagon with no CS involvement. However only <strong>${UI.fmt.num(m.compliantCount)}</strong> of those are fully documented (closed + reason tagged) — the rest are Decagon API issues.`,
     `<strong>${UI.fmt.num(m.statusNotClosed)} call tickets are not closed</strong> — this is a Decagon API integration issue, not an agent issue.`
   ];
 
