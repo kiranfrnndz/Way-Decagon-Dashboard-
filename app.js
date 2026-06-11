@@ -603,6 +603,7 @@ function renderDashboard() {
   const m = DataProcessor.computeMetrics(STATE.filteredTickets, STATE.totalCallInts, STATE.totalAIInts, STATE.rawRows.length);
   renderKPIs(m);
   renderEffectivenessCharts(m);
+  buildFCRTab();
   renderComplianceSection(m);
   renderDefectSection(m);
   renderReasonAnalysis(m);
@@ -1152,14 +1153,281 @@ function generateSampleData() {
 
 // ── NAV & INIT ──
 function setupNav() {
-  const TITLES = { upload: 'Data Source', kpis: 'Executive KPIs', effectiveness: 'Decagon Effectiveness', compliance: 'Decagon Compliance', defects: 'System Defects', reasons: 'Reason Analysis', executive: 'Executive Summary', recontact: 'Re-contact Analysis', validation: 'Data Validation', tickets: 'Master Tickets' };
-  document.querySelectorAll('.nav-item').forEach(item => {
+  const TITLES = { upload: 'Data Source', kpis: 'Executive KPIs', effectiveness: 'Decagon Effectiveness', fcr: 'FCR Analysis', compliance: 'Decagon Compliance', defects: 'System Defects', reasons: 'Reason Analysis', executive: 'Executive Summary', recontact: 'Re-contact Analysis', validation: 'Data Validation', tickets: 'Master Tickets' };
+  
+// ── FCR TAB ──────────────────────────────────────────────────────────────
+function buildFCRTab() {
+  const dec = [...STATE.filteredTickets.values()].filter(t => t.isDecagonTicket);
+  const met = dec.filter(t => t.fcrAchieved);
+  const notMet = dec.filter(t => !t.fcrAchieved);
+  const trueFCR = dec.filter(t => t.fcrAchieved && t.compliant);
+  const csAssisted = dec.filter(t => t.csAssisted);
+  const multiAI = dec.filter(t => !t.csAssisted && t.aiInteractionCount > 1);
+  const shortInt = dec.filter(t => !t.csAssisted && t.aiInteractionCount === 1 && t.shortIntervalFlag);
+
+  // Summary cards
+  const sr = document.getElementById('fcrSummaryRow');
+  if (!sr) return;
+  const fcrRate = dec.length ? (met.length / dec.length * 100).toFixed(1) : 0;
+  const trueFCRRate = dec.length ? (trueFCR.length / dec.length * 100).toFixed(1) : 0;
+  sr.innerHTML = `
+    <div class="kpi-card" style="border-top:3px solid #059669">
+      <div class="kpi-label">FCR MET</div>
+      <div class="kpi-val" style="color:#059669">${UI.fmt.num(met.length)}</div>
+      <div class="kpi-sub">${fcrRate}% of ${UI.fmt.num(dec.length)} tickets</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid #dc2626">
+      <div class="kpi-label">FCR NOT MET</div>
+      <div class="kpi-val" style="color:#dc2626">${UI.fmt.num(notMet.length)}</div>
+      <div class="kpi-sub">${(100-fcrRate).toFixed(1)}% of total</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid #7c3aed">
+      <div class="kpi-label">TRUE FCR (FCR + Compliant)</div>
+      <div class="kpi-val" style="color:#7c3aed">${UI.fmt.num(trueFCR.length)}</div>
+      <div class="kpi-sub">${trueFCRRate}% of total</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid #d97706">
+      <div class="kpi-label">FAILURE — CS ASSISTED</div>
+      <div class="kpi-val" style="color:#d97706">${UI.fmt.num(csAssisted.length)}</div>
+      <div class="kpi-sub">Multi AI: ${UI.fmt.num(multiAI.length)} | Short Interval: ${UI.fmt.num(shortInt.length)}</div>
+    </div>`;
+
+  // Daily FCR trend chart
+  const dateMap = {};
+  dec.forEach(t => {
+    const d = t.dateBucket || 'Unknown';
+    if (!dateMap[d]) dateMap[d] = { met: 0, total: 0 };
+    dateMap[d].total++;
+    if (t.fcrAchieved) dateMap[d].met++;
+  });
+  const dates = Object.keys(dateMap).sort();
+  const fcrRates = dates.map(d => dateMap[d].total ? (dateMap[d].met / dateMap[d].total * 100).toFixed(1) : 0);
+
+  const ctx3 = document.getElementById('fcrTrendChart');
+  if (ctx3) {
+    if (ctx3._chart) ctx3._chart.destroy();
+    ctx3._chart = new Chart(ctx3, { type: 'line', data: {
+      labels: dates,
+      datasets: [{ label: 'FCR %', data: fcrRates, borderColor: '#059669', backgroundColor: 'rgba(5,150,105,0.1)', fill: true, tension: 0.4, pointRadius: 3 }]
+    }, options: { ...base, scales: { x: base.scales.x, y: { ...base.scales.y, ticks: { ...base.scales.y.ticks, callback: v => v + '%' }, max: 100 } } } });
+  }
+
+  // Failure breakdown doughnut
+  const ctx4 = document.getElementById('fcrFailChart');
+  if (ctx4) {
+    if (ctx4._chart) ctx4._chart.destroy();
+    ctx4._chart = new Chart(ctx4, { type: 'doughnut', data: {
+      labels: ['CS Assisted', 'Multiple AI Calls', 'Short Interval'],
+      datasets: [{ data: [csAssisted.length, multiAI.length, shortInt.length], backgroundColor: ['#f59e0b','#3b82f6','#ef4444'], borderWidth: 2 }]
+    }, options: { ...base, plugins: { ...base.plugins, legend: { display: true, position: 'bottom' } } } });
+  }
+
+  // Reason / Sub Reason table
+  const reasonMap = {};
+  dec.forEach(t => {
+    const r = (t.reason && t.reason.trim()) || (t.actionTaken && t.actionTaken.trim()) || '(No Reason)';
+    const sr2 = (t.subReason && t.subReason.trim()) || (t.actionTaken && t.actionTaken.trim()) || '(No Sub Reason)';
+    const key = r + '|||' + sr2;
+    if (!reasonMap[key]) reasonMap[key] = { reason: r, subReason: sr2, met: 0, notMet: 0 };
+    if (t.fcrAchieved) reasonMap[key].met++; else reasonMap[key].notMet++;
+  });
+
+  const rows = Object.values(reasonMap).sort((a, b) => (b.met + b.notMet) - (a.met + a.notMet));
+  const rtDiv = document.getElementById('fcrReasonTable');
+  if (rtDiv) {
+    rtDiv.innerHTML = `<table class="fcr-reason-table">
+      <thead><tr><th>Reason</th><th>Sub Reason</th><th>FCR Met</th><th>Not Met</th><th>Total</th></tr></thead>
+      <tbody>${rows.map(r => `<tr class="fcr-reason-group">
+        <td>${r.reason}</td>
+        <td>${r.subReason}</td>
+        <td><span class="fcr-met-badge">${r.met}</span></td>
+        <td><span class="fcr-fail-badge">${r.notMet}</span></td>
+        <td>${r.met + r.notMet}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  }
+
+  // Drill-down DataTable
+  if (STATE.fcrDrillTable) { STATE.fcrDrillTable.destroy(); STATE.fcrDrillTable = null; }
+  const statusFilter = document.getElementById('fcrFilterStatus')?.value || '';
+  const reasonFilter = document.getElementById('fcrFilterReason')?.value || '';
+
+  let filtered = dec;
+  if (statusFilter === 'met') filtered = filtered.filter(t => t.fcrAchieved);
+  if (statusFilter === 'notmet') filtered = filtered.filter(t => !t.fcrAchieved);
+  if (reasonFilter === 'cs') filtered = filtered.filter(t => t.csAssisted);
+  if (reasonFilter === 'multi') filtered = filtered.filter(t => !t.csAssisted && t.aiInteractionCount > 1);
+  if (reasonFilter === 'short') filtered = filtered.filter(t => !t.csAssisted && t.aiInteractionCount === 1 && t.shortIntervalFlag);
+
+  const failReason = t => {
+    if (t.fcrAchieved) return '—';
+    if (t.csAssisted) return 'CS Assisted';
+    if (t.aiInteractionCount > 1) return 'Multiple AI Calls';
+    if (t.shortIntervalFlag) return 'Short Interval';
+    return 'Other';
+  };
+
+  STATE.fcrDrillTable = new DataTable('#fcrDrillTable', {
+    data: filtered,
+    destroy: true,
+    pageLength: 25,
+    columns: [
+      { title: 'Ticket ID', data: 'ticketId' },
+      { title: 'Date', data: 'dateBucket' },
+      { title: 'FCR', data: 'fcrAchieved', render: d => d ? '<span class="fcr-met-badge">MET</span>' : '<span class="fcr-fail-badge">NOT MET</span>' },
+      { title: 'Failure Reason', data: null, render: (d,t,r) => failReason(r) },
+      { title: 'Reason', data: 'reason', render: d => d || '—' },
+      { title: 'Sub Reason', data: 'subReason', render: d => d || '—' },
+      { title: 'Action Taken', data: 'actionTaken', render: d => d || '—' },
+      { title: 'Status', data: 'status', render: d => d || '—' },
+      { title: 'AI Interactions', data: 'aiInteractionCount' },
+    ]
+  });
+
+  document.getElementById('fcrApplyFilter')?.addEventListener('click', buildFCRTab);
+}
+
+document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      
+// ── FCR TAB ──────────────────────────────────────────────────────────────
+function buildFCRTab() {
+  const dec = [...STATE.filteredTickets.values()].filter(t => t.isDecagonTicket);
+  const met = dec.filter(t => t.fcrAchieved);
+  const notMet = dec.filter(t => !t.fcrAchieved);
+  const trueFCR = dec.filter(t => t.fcrAchieved && t.compliant);
+  const csAssisted = dec.filter(t => t.csAssisted);
+  const multiAI = dec.filter(t => !t.csAssisted && t.aiInteractionCount > 1);
+  const shortInt = dec.filter(t => !t.csAssisted && t.aiInteractionCount === 1 && t.shortIntervalFlag);
+
+  // Summary cards
+  const sr = document.getElementById('fcrSummaryRow');
+  if (!sr) return;
+  const fcrRate = dec.length ? (met.length / dec.length * 100).toFixed(1) : 0;
+  const trueFCRRate = dec.length ? (trueFCR.length / dec.length * 100).toFixed(1) : 0;
+  sr.innerHTML = `
+    <div class="kpi-card" style="border-top:3px solid #059669">
+      <div class="kpi-label">FCR MET</div>
+      <div class="kpi-val" style="color:#059669">${UI.fmt.num(met.length)}</div>
+      <div class="kpi-sub">${fcrRate}% of ${UI.fmt.num(dec.length)} tickets</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid #dc2626">
+      <div class="kpi-label">FCR NOT MET</div>
+      <div class="kpi-val" style="color:#dc2626">${UI.fmt.num(notMet.length)}</div>
+      <div class="kpi-sub">${(100-fcrRate).toFixed(1)}% of total</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid #7c3aed">
+      <div class="kpi-label">TRUE FCR (FCR + Compliant)</div>
+      <div class="kpi-val" style="color:#7c3aed">${UI.fmt.num(trueFCR.length)}</div>
+      <div class="kpi-sub">${trueFCRRate}% of total</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid #d97706">
+      <div class="kpi-label">FAILURE — CS ASSISTED</div>
+      <div class="kpi-val" style="color:#d97706">${UI.fmt.num(csAssisted.length)}</div>
+      <div class="kpi-sub">Multi AI: ${UI.fmt.num(multiAI.length)} | Short Interval: ${UI.fmt.num(shortInt.length)}</div>
+    </div>`;
+
+  // Daily FCR trend chart
+  const dateMap = {};
+  dec.forEach(t => {
+    const d = t.dateBucket || 'Unknown';
+    if (!dateMap[d]) dateMap[d] = { met: 0, total: 0 };
+    dateMap[d].total++;
+    if (t.fcrAchieved) dateMap[d].met++;
+  });
+  const dates = Object.keys(dateMap).sort();
+  const fcrRates = dates.map(d => dateMap[d].total ? (dateMap[d].met / dateMap[d].total * 100).toFixed(1) : 0);
+
+  const ctx3 = document.getElementById('fcrTrendChart');
+  if (ctx3) {
+    if (ctx3._chart) ctx3._chart.destroy();
+    ctx3._chart = new Chart(ctx3, { type: 'line', data: {
+      labels: dates,
+      datasets: [{ label: 'FCR %', data: fcrRates, borderColor: '#059669', backgroundColor: 'rgba(5,150,105,0.1)', fill: true, tension: 0.4, pointRadius: 3 }]
+    }, options: { ...base, scales: { x: base.scales.x, y: { ...base.scales.y, ticks: { ...base.scales.y.ticks, callback: v => v + '%' }, max: 100 } } } });
+  }
+
+  // Failure breakdown doughnut
+  const ctx4 = document.getElementById('fcrFailChart');
+  if (ctx4) {
+    if (ctx4._chart) ctx4._chart.destroy();
+    ctx4._chart = new Chart(ctx4, { type: 'doughnut', data: {
+      labels: ['CS Assisted', 'Multiple AI Calls', 'Short Interval'],
+      datasets: [{ data: [csAssisted.length, multiAI.length, shortInt.length], backgroundColor: ['#f59e0b','#3b82f6','#ef4444'], borderWidth: 2 }]
+    }, options: { ...base, plugins: { ...base.plugins, legend: { display: true, position: 'bottom' } } } });
+  }
+
+  // Reason / Sub Reason table
+  const reasonMap = {};
+  dec.forEach(t => {
+    const r = (t.reason && t.reason.trim()) || (t.actionTaken && t.actionTaken.trim()) || '(No Reason)';
+    const sr2 = (t.subReason && t.subReason.trim()) || (t.actionTaken && t.actionTaken.trim()) || '(No Sub Reason)';
+    const key = r + '|||' + sr2;
+    if (!reasonMap[key]) reasonMap[key] = { reason: r, subReason: sr2, met: 0, notMet: 0 };
+    if (t.fcrAchieved) reasonMap[key].met++; else reasonMap[key].notMet++;
+  });
+
+  const rows = Object.values(reasonMap).sort((a, b) => (b.met + b.notMet) - (a.met + a.notMet));
+  const rtDiv = document.getElementById('fcrReasonTable');
+  if (rtDiv) {
+    rtDiv.innerHTML = `<table class="fcr-reason-table">
+      <thead><tr><th>Reason</th><th>Sub Reason</th><th>FCR Met</th><th>Not Met</th><th>Total</th></tr></thead>
+      <tbody>${rows.map(r => `<tr class="fcr-reason-group">
+        <td>${r.reason}</td>
+        <td>${r.subReason}</td>
+        <td><span class="fcr-met-badge">${r.met}</span></td>
+        <td><span class="fcr-fail-badge">${r.notMet}</span></td>
+        <td>${r.met + r.notMet}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  }
+
+  // Drill-down DataTable
+  if (STATE.fcrDrillTable) { STATE.fcrDrillTable.destroy(); STATE.fcrDrillTable = null; }
+  const statusFilter = document.getElementById('fcrFilterStatus')?.value || '';
+  const reasonFilter = document.getElementById('fcrFilterReason')?.value || '';
+
+  let filtered = dec;
+  if (statusFilter === 'met') filtered = filtered.filter(t => t.fcrAchieved);
+  if (statusFilter === 'notmet') filtered = filtered.filter(t => !t.fcrAchieved);
+  if (reasonFilter === 'cs') filtered = filtered.filter(t => t.csAssisted);
+  if (reasonFilter === 'multi') filtered = filtered.filter(t => !t.csAssisted && t.aiInteractionCount > 1);
+  if (reasonFilter === 'short') filtered = filtered.filter(t => !t.csAssisted && t.aiInteractionCount === 1 && t.shortIntervalFlag);
+
+  const failReason = t => {
+    if (t.fcrAchieved) return '—';
+    if (t.csAssisted) return 'CS Assisted';
+    if (t.aiInteractionCount > 1) return 'Multiple AI Calls';
+    if (t.shortIntervalFlag) return 'Short Interval';
+    return 'Other';
+  };
+
+  STATE.fcrDrillTable = new DataTable('#fcrDrillTable', {
+    data: filtered,
+    destroy: true,
+    pageLength: 25,
+    columns: [
+      { title: 'Ticket ID', data: 'ticketId' },
+      { title: 'Date', data: 'dateBucket' },
+      { title: 'FCR', data: 'fcrAchieved', render: d => d ? '<span class="fcr-met-badge">MET</span>' : '<span class="fcr-fail-badge">NOT MET</span>' },
+      { title: 'Failure Reason', data: null, render: (d,t,r) => failReason(r) },
+      { title: 'Reason', data: 'reason', render: d => d || '—' },
+      { title: 'Sub Reason', data: 'subReason', render: d => d || '—' },
+      { title: 'Action Taken', data: 'actionTaken', render: d => d || '—' },
+      { title: 'Status', data: 'status', render: d => d || '—' },
+      { title: 'AI Interactions', data: 'aiInteractionCount' },
+    ]
+  });
+
+  document.getElementById('fcrApplyFilter')?.addEventListener('click', buildFCRTab);
+}
+
+document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
       item.classList.add('active');
       const tab = item.dataset.tab;
       document.getElementById('tab-' + tab)?.classList.add('active');
+    if (tab === 'fcr') buildFCRTab();
       document.getElementById('topbarTitle').textContent = TITLES[tab] || tab;
     });
   });
